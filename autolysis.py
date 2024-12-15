@@ -1,3 +1,15 @@
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#     "pandas",
+#     "seaborn",
+#     "matplotlib",
+#     "httpx",
+#     "chardet",
+#     "tenacity"
+# ]
+# ///
+
 import os
 import sys
 import pandas as pd
