@@ -38,31 +38,98 @@ def load_data(file_path, max_rows=100):
         print(f"Error loading file: {e}")
         sys.exit(1)
 
+import numpy as np
+from scipy.stats import skew, kurtosis, ttest_ind, chi2_contingency
+
 def analyze_data(df):
-    """Perform basic data analysis on a subset of the data."""
+    """
+    Perform detailed exploratory data analysis (EDA) on the dataset.
+    
+    Parameters:
+    - df (pd.DataFrame): The dataset to analyze.
+    
+    Returns:
+    - dict: A dictionary containing detailed analysis results.
+    """
     numeric_df = df.select_dtypes(include=['number'])
+    categorical_df = df.select_dtypes(include=['object', 'category'])
     datetime_columns = df.select_dtypes(include=['datetime'])
-    non_numeric_df = df.select_dtypes(exclude=['number', 'datetime'])
 
-    # Summary statistics for a subset
+    # Summary statistics
     summary = df.describe(include='all').to_dict()
-    if not datetime_columns.empty:
-        for col in datetime_columns:
-            summary[col] = {
-                'min': df[col].min(),
-                'max': df[col].max(),
-                'unique': df[col].nunique()
-            }
 
+    # Skewness and kurtosis
+    if not numeric_df.empty:
+        summary['skewness'] = numeric_df.apply(skew, nan_policy='omit').to_dict()
+        summary['kurtosis'] = numeric_df.apply(kurtosis, nan_policy='omit').to_dict()
+
+    # Outlier detection
+    outliers = {}
+    for col in numeric_df.columns:
+        Q1 = numeric_df[col].quantile(0.25)
+        Q3 = numeric_df[col].quantile(0.75)
+        IQR = Q3 - Q1
+        outliers[col] = {
+            'lower_bound': Q1 - 1.5 * IQR,
+            'upper_bound': Q3 + 1.5 * IQR,
+            'outlier_count': ((numeric_df[col] < Q1 - 1.5 * IQR) | (numeric_df[col] > Q3 + 1.5 * IQR)).sum()
+        }
+
+    # Correlation matrix
+    correlation = numeric_df.corr().to_dict() if not numeric_df.empty else {}
+
+    # Missing values
+    missing_values = df.isnull().sum().to_dict()
+
+    # Examples of data
+    examples = df.head(5).to_dict()
+
+    # Categorical value counts
+    categorical_analysis = {}
+    for col in categorical_df.columns:
+        counts = df[col].value_counts()
+        categorical_analysis[col] = {
+            'value_counts': counts.to_dict(),
+            'unique_values': counts.index.tolist()
+        }
+
+    # Statistical tests (if categorical and numeric variables are present)
+    statistical_tests = {}
+    if not numeric_df.empty and not categorical_df.empty:
+        for cat_col in categorical_df.columns:
+            for num_col in numeric_df.columns:
+                grouped = [numeric_df[num_col][df[cat_col] == cat].dropna() for cat in df[cat_col].unique()]
+                if len(grouped) > 1:
+                    try:
+                        stat, p_value = ttest_ind(*grouped, equal_var=False)
+                        statistical_tests[f"{cat_col} vs {num_col}"] = {"t-stat": stat, "p-value": p_value}
+                    except Exception as e:
+                        statistical_tests[f"{cat_col} vs {num_col}"] = {"error": str(e)}
+
+    # Chi-squared test for categorical variables
+    chi_squared_results = {}
+    for col1 in categorical_df.columns:
+        for col2 in categorical_df.columns:
+            if col1 != col2:
+                contingency = pd.crosstab(df[col1], df[col2])
+                chi2, p, dof, expected = chi2_contingency(contingency, correction=False)
+                chi_squared_results[f"{col1} vs {col2}"] = {"chi2": chi2, "p-value": p, "dof": dof}
+
+    # Final analysis dictionary
     analysis = {
-        'summary': summary,
-        'missing_values': df.isnull().sum().to_dict(),
-        'correlation': numeric_df.corr().to_dict(),
-        'examples': df.head(5).to_dict(),
+        'summary_statistics': summary,
+        'outliers': outliers,
+        'correlation': correlation,
+        'missing_values': missing_values,
+        'examples': examples,
+        'categorical_analysis': categorical_analysis,
+        'statistical_tests': statistical_tests,
+        'chi_squared_results': chi_squared_results,
         'column_types': df.dtypes.astype(str).to_dict(),
     }
 
     return analysis
+
 
 def visualize_data(df, max_distributions=None):
     """
