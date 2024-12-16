@@ -64,34 +64,55 @@ def analyze_data(df):
 
     return analysis
 
-def visualize_data(df):
-    """Generate and save simplified visualizations."""
+def visualize_data(df, max_distributions=None):
+    """
+    Generate and save enhanced visualizations with detailed titles and labels.
+    
+    Parameters:
+    - df (pd.DataFrame): DataFrame to visualize.
+    - max_distributions (int): Maximum number of distribution plots. Default is None (all numeric columns).
+    
+    Returns:
+    - list: List of paths to saved image files.
+    """
     sns.set(style="whitegrid")
     output_images = []
 
     # Correlation Heatmap
     numeric_df = df.select_dtypes(include=['number'])
     if not numeric_df.empty:
-        plt.figure(figsize=(8, 6))  # Adjust size for quicker rendering
+        plt.figure(figsize=(10, 8))
         correlation = numeric_df.corr()
         sns.heatmap(correlation, annot=True, cmap="coolwarm", fmt=".2f", linewidths=0.5)
         plt.title("Correlation Heatmap")
-        heatmap_path = "correlation_heatmap.png"
-        plt.savefig(heatmap_path)
+        plt.xlabel("Features")
+        plt.ylabel("Features")
+        heatmap_path = "visualizations/correlation_heatmap.png"
+        os.makedirs(os.path.dirname(heatmap_path), exist_ok=True)
+        plt.savefig(heatmap_path, bbox_inches="tight")
         output_images.append(heatmap_path)
         plt.close()
 
-    # Limit the number of distribution plots to the first 3 numeric columns
-    for column in numeric_df.columns[:3]:  # Only plot up to 3 columns
-        plt.figure()
-        sns.histplot(df[column].dropna(), kde=True, color='blue')
+    # Distribution Plots
+    if max_distributions is None:
+        columns_to_plot = numeric_df.columns
+    else:
+        columns_to_plot = numeric_df.columns[:max_distributions]
+
+    for column in columns_to_plot:
+        plt.figure(figsize=(8, 6))
+        sns.histplot(df[column].dropna(), kde=True, color='blue', bins=30)
         plt.title(f'Distribution of {column}')
-        dist_path = f'{column}_distribution.png'
-        plt.savefig(dist_path)
+        plt.xlabel(column)
+        plt.ylabel("Frequency")
+        plt.legend(labels=["Distribution"])
+        dist_path = f'visualizations/{column}_distribution.png'
+        plt.savefig(dist_path, bbox_inches="tight")
         output_images.append(dist_path)
         plt.close()
 
     return output_images
+
 
 # Retry settings for faster failure
 @retry(
