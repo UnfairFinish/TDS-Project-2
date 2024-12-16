@@ -4,12 +4,14 @@
 #     "pandas>=2.0.0,<3.0.0",
 #     "seaborn>=0.12.0,<0.14.0",
 #     "matplotlib>=3.7.0,<3.9.0",
-#     "kiwisolver>=1.4.4,<1.5.0",  # Add compatible version range
+#     "kiwisolver>=1.4.4,<1.5.0",
+#     "pyparsing>=3.0.0,<3.1.0",  # Add compatible version range for pyparsing
 #     "httpx>=0.25.0,<1.0.0",
 #     "chardet>=5.1.0,<6.0.0",
 #     "tenacity>=8.2.0,<9.0.0"
 # ]
 # ///
+
 
 
 import os
